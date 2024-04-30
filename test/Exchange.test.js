@@ -17,6 +17,7 @@ contract("Exchange", ([deployer, feeAccount, user1]) => {
         exchange = await Exchange.new(feeAccount, feePercent);
 
     });
+    // 测试部署
     describe("deployment", () => {
         it("tracks the fee account", async () => {
             const result = await exchange.feeAccount();
@@ -27,14 +28,13 @@ contract("Exchange", ([deployer, feeAccount, user1]) => {
             result.toString().should.equal(feePercent.toString());
         });
     });
-
     //撤销发送事件
     describe('fallback', () => {
-        it('reverts when Ether is sent', async() => {
-            await exchange.sendTransaction({value:1,from:user1}).should.be.rejectedWith(EVM_REVERT)
+        it('reverts when Ether is sent', async () => {
+            await exchange.sendTransaction({value: 1, from: user1}).should.be.rejectedWith(EVM_REVERT)
         });
     });
-
+    // 存入Ether
     describe("depositing Ether", () => {
         let result;
         let amount;
@@ -57,7 +57,7 @@ contract("Exchange", ([deployer, feeAccount, user1]) => {
             event.balance.toString().should.equal(amount.toString(), "balance is correct");
         });
     });
-
+    // 存入代币
     describe("depositing tokens", () => {
         let result;
         let amount;
@@ -98,5 +98,39 @@ contract("Exchange", ([deployer, feeAccount, user1]) => {
                 await exchange.depositToken(token.address, amount, {from: user1}).should.be.rejectedWith(EVM_REVERT)
             });
         });
+    });
+    // 提取Ether
+    describe("withdraws Ether func", () => {
+        let result;
+        let amount;
+        beforeEach(async () => {
+            amount = ether(1);
+            await exchange.depositEther({from: user1, value: amount});
+        });
+        describe("success", async () => {
+            beforeEach(async () => {
+                result = await exchange.withdrawEther(amount, {from: user1});
+            });
+            it('withdraws Ether funds', async () => {
+                const balance = await exchange.tokens(ETHER_ADDRESS, user1);
+                balance.toString().should.equal('0');
+            });
+            it("emits a Withdraw event", async () => {
+                const log = result.logs[0];
+                log.event.should.eq("Withdraw"); // 验证事件名
+                // 验证提供者，消费者，批准数量
+                const event = log.args;
+                event.token.should.equal(ETHER_ADDRESS);
+                event.user.should.equal(user1);
+                event.amount.toString().should.equal(amount.toString());
+                event.balance.toString().should.equal('0');
+            });
+        })
+        describe("failure", async () => {
+            it('rejects withdraws for insufficient balance', async () => {
+                // 测试转账 100 ether, 因为我们没有存入 100 ether, 所以此时交易所应该拒绝这笔交易
+                await exchange.withdrawEther(ether(100), {from: user1}).should.be.rejectedWith(EVM_REVERT)
+            })
+        })
     });
 });

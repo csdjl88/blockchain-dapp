@@ -25,17 +25,19 @@ contract Exchange {
     uint256 public feePercent; // 交易费率
     address constant ETHER = address(0); //constant 常量  默认0为以太坊地址
     // 第一个地址：token地址，第二个地址：存入代币的用户地址
-    mapping(address => mapping(address => uint256)) public tokens;
+    mapping(address => mapping(address => uint256)) public tokens; // 代币 => (实际用户地址 => 用户持有的代币数量)
 
     // event
     event Deposit(address token, address user, uint256 amount, uint256 balance);
+    event Withdraw(address token, address user, uint256 amount, uint256 balance);
+
 
     constructor(address _feeAccount, uint256 _feePercent) public {
         feeAccount = _feeAccount;
         feePercent = _feePercent;
     }
     // 回滚
-    fallback()  external {
+    fallback() external {
         revert();
     }
 
@@ -44,6 +46,16 @@ contract Exchange {
         tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender].add(msg.value);
         // 发送事件
         emit Deposit(ETHER, msg.sender, msg.value, tokens[ETHER][msg.sender]);
+    }
+
+    // 提取以太坊
+    function withdrawEther(uint256 _amount) public {
+        require(_token != ETHER);// 不允许ether
+        require(tokens[ETHER][msg.sender] >= _amount);  //余额必须大于等于提取金额
+        tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender].sub(_amount);
+        msg.sender.transfer(_amount);
+        // 发送事件
+        emit Withdraw(ETHER, msg.sender, _amount, tokens[ETHER][msg.sender]);
     }
 
     // 存款
@@ -56,6 +68,11 @@ contract Exchange {
         tokens[_token][msg.sender] = tokens[_token][msg.sender].add(_amount);
         // 发送事件
         emit Deposit(_token, msg.sender, _amount, tokens[_token][msg.sender]);
+    }
 
+    //提取token
+    function depositToken(address _token, uint256 _amount) public {
+        tokens[_token][msg.sender] = tokens[_token][msg.sender].sub(_amount);
+        require(Token(_token).transfer(msg.sender, _amount)); // 从智能合约转回token
     }
 }
