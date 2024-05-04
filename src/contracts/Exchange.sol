@@ -10,10 +10,10 @@ import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 // TODO:
 // [X] 设置手续费
 // [X] 存入 ether
-// [] 提取 ether
+// [X] 提取 ether
 // [X] 存入 token
-// [] 提取 token
-// [] 余额检查
+// [X] 提取 token
+// [X] 余额检查
 // [] 创建订单
 // [] 取消订单
 // [] 填充订单
@@ -21,16 +21,21 @@ import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 // 交易所
 contract Exchange {
     using SafeMath for uint;
-    address public feeAccount;  //接收交易费用的账户
+    address public feeAccount; //接收交易费用的账户
     uint256 public feePercent; // 交易费率
     address constant ETHER = address(0); //constant 常量  默认0为以太坊地址
     // 第一个地址：token地址，第二个地址：存入代币的用户地址
     mapping(address => mapping(address => uint256)) public tokens; // 代币 => (实际用户地址 => 用户持有的代币数量)
 
-    // event
+    // 存款事件
     event Deposit(address token, address user, uint256 amount, uint256 balance);
-    event Withdraw(address token, address user, uint256 amount, uint256 balance);
-
+    // 提款事件
+    event Withdraw(
+        address token,
+        address user,
+        uint256 amount,
+        uint256 balance
+    );
 
     constructor(address _feeAccount, uint256 _feePercent) public {
         feeAccount = _feeAccount;
@@ -38,41 +43,50 @@ contract Exchange {
     }
     // 回滚
     fallback() external {
+        // external 任何地方都可以调用
         revert();
     }
-
     // 存入以太坊
-    function depositEther() payable public {  //payable  修改器方法，认为可支付
+    function depositEther() public payable {
+        //payable  修饰器，认为可支付
+        // solidity 允许msg.value
         tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender].add(msg.value);
         // 发送事件
         emit Deposit(ETHER, msg.sender, msg.value, tokens[ETHER][msg.sender]);
     }
 
     // 提取以太坊
-    function withdrawEther(uint256 _amount) public {
-        require(_token != ETHER);// 不允许ether
-        require(tokens[ETHER][msg.sender] >= _amount);  //余额必须大于等于提取金额
+    function withdrawEther(uint _amount) public {
+        require(tokens[ETHER][msg.sender] >= _amount); //余额必须大于等于提取金额
         tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender].sub(_amount);
-        msg.sender.transfer(_amount);
-        // 发送事件
+        payable(msg.sender).transfer(_amount); //在 Solidity 0.8之后，address就不是默认payable类型了。所以要在address前面加上payable的强制类型转换
         emit Withdraw(ETHER, msg.sender, _amount, tokens[ETHER][msg.sender]);
     }
 
-    // 存款
-    function depositToken(address _token, uint256 _amount) public {    // 哪个token  // how much
+    // 存款token
+    function depositToken(address _token, uint256 _amount) public {
+        // 哪个token  // how much
         // 不允许 ether 存入
         require(_token != ETHER);
         // 发送token去合约
-        require(Token(_token).transferFrom(msg.sender, address(this), _amount));  //this指自身智能合约
+        require(Token(_token).transferFrom(msg.sender, address(this), _amount)); //this指自身智能合约
         // 跟踪交易所余额 - 更新余额
         tokens[_token][msg.sender] = tokens[_token][msg.sender].add(_amount);
         // 发送事件
         emit Deposit(_token, msg.sender, _amount, tokens[_token][msg.sender]);
     }
 
-    //提取token
-    function depositToken(address _token, uint256 _amount) public {
-        tokens[_token][msg.sender] = tokens[_token][msg.sender].sub(_amount);
-        require(Token(_token).transfer(msg.sender, _amount)); // 从智能合约转回token
+    // 提取token
+    function withdrawToken(address _token, uint256 _amount) public {
+        require(_token != ETHER); // 不允许 ether 提取
+        require(tokens[_token][msg.sender] >= _amount); //余额必须大于等于提取金额
+        tokens[_token][msg.sender] = tokens[_token][msg.sender].sub(_amount); // 减少用户余额
+        require(Token(_token).transfer(msg.sender, _amount)); // 从智能合约提取代币给用户
+        emit Withdraw(_token, msg.sender, _amount, tokens[_token][msg.sender]);
+    }
+
+    // 获取用户余额
+    function balanceOf(address _token, address _user) public view returns (uint256) {
+        return tokens[_token][_user];
     }
 }
