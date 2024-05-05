@@ -14,8 +14,8 @@ import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 // [X] 存入 token
 // [X] 提取 token
 // [X] 余额检查
-// [] 创建订单
-// [] 取消订单
+// [X] 创建订单
+// [X] 取消订单
 // [] 填充订单
 
 // 交易所
@@ -28,6 +28,11 @@ contract Exchange {
     mapping(address => mapping(address => uint256)) public tokens; // 代币 => (实际用户地址 => 用户持有的代币数量)
 
     mapping(uint256 => _Order) public orders; // uint256相当于ID
+
+    uint256 public orderCount; // 相当于订单自增ID
+
+    mapping(uint256 => bool) public orderCancel;
+
     // 存款事件
     event Deposit(address token, address user, uint256 amount, uint256 balance);
     // 提款事件
@@ -37,17 +42,37 @@ contract Exchange {
         uint256 amount,
         uint256 balance
     );
+    // 订单事件
+    event Order(
+        uint256 id,
+        address user,
+        address tokenGet,
+        uint256 amountGet,
+        address tokenGive,
+        uint256 amountGive,
+        uint256 timestamp
+    );
+    event Cancel(
+        uint256 id,
+        address user,
+        address tokenGet,
+        uint256 amountGet,
+        address tokenGive,
+        uint256 amountGive,
+        uint256 timestamp
+    );
+
     // TODO:
     // [X] 建立一个订单model
     // [x] mapping 储存订单的方法
     // [] 储存订单
     // 结构体 相当于建数据模型
     struct _Order {
-        uint id;
-        address user;  // 订单创建的用户
-        address tokenGet;  // 合约订单的地址
-        uint256 amountGet;  // 代币数量
-        address tokenGive;  //
+        uint256 id;
+        address user; // 订单创建的用户
+        address tokenGet; // 合约订单的地址
+        uint256 amountGet; // 代币数量
+        address tokenGive; //
         uint256 amountGive; // 交易的数量
         uint256 timestamp; // 时间戳
     }
@@ -100,14 +125,67 @@ contract Exchange {
     }
 
     // 获取用户余额
-    function balanceOf(address _token, address _user) public view returns (uint256) {
+    function balanceOf(
+        address _token,
+        address _user
+    ) public view returns (uint256) {
         return tokens[_token][_user];
     }
 
     // 创建订单
-    function makeOrder(address _tokenGet, uint256 _amountGet, address _tokenGive, uint256 _amountGive) public {
-        _id = 1;
+    function makeOrder(
+        address _tokenGet,
+        uint256 _amountGet,
+        address _tokenGive,
+        uint256 _amountGive
+    ) public {
+        orderCount = orderCount.add(1);
+        orders[orderCount] = _Order(
+            orderCount,
+            msg.sender,
+            _tokenGet,
+            _amountGet,
+            _tokenGive,
+            _amountGive,
+            block.timestamp
+        );
+        emit Order(
+            orderCount,
+            msg.sender,
+            _tokenGet,
+            _amountGet,
+            _tokenGive,
+            _amountGive,
+            block.timestamp
+        );
+
+        // uint id;
+        // address user;  // 订单创建的用户
+        // address tokenGet;  // 合约订单的地址
+        // uint256 amountGet;  // 代币数量
+        // address tokenGive;  //
+        // uint256 amountGive; // 交易的数量
+        // uint256 timestamp; // 时间戳
     }
 
-
+    function cancelOrder(uint256 _id) public {
+        //  读取指定ID的订单, 作为变量取出，这里_Order相当于一个变量类型，_order相当于一个变量名称，storage指的是从storage存储器读取
+        _Order storage _order = orders[_id];
+        //   检查是我的订单
+        require(address(_order.user) == msg.sender);
+        // 检查有效订单
+        require(_order.id == _id);
+        // 取消订单
+        orderCancel[_id] = true;
+        // 取消订单事件
+        emit Cancel(
+            _order.id,
+            msg.sender,
+            _order.tokenGet,
+            _order.amountGet,
+            _order.tokenGive,
+            _order.amountGive,
+            _order.timestamp
+        );
+    }
 }
