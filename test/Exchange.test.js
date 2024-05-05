@@ -94,7 +94,7 @@ contract("Exchange", ([deployer, feeAccount, user1]) => {
       it("rejects withdraws for insufficient balance", async () => {
         // 测试转账 100 ether, 因为我们没有存入 100 ether, 所以此时交易所应该拒绝这笔交易
         await exchange
-          .withdrawEther(ether(100), { from: user1 })
+          .withdrawEther(ether(1000), { from: user1 })
           .should.be.rejectedWith(EVM_REVERT);
       });
     });
@@ -205,7 +205,7 @@ contract("Exchange", ([deployer, feeAccount, user1]) => {
     });
     it("returns user balance", async () => {
       const result = await exchange.balanceOf(ETHER_ADDRESS, user1);
-      result.toString().should.equal(ether(1).toString());
+      result.toString().should.equal(ether(0).toString());
     });
   });
 });

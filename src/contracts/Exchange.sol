@@ -27,6 +27,7 @@ contract Exchange {
     // 第一个地址：token地址，第二个地址：存入代币的用户地址
     mapping(address => mapping(address => uint256)) public tokens; // 代币 => (实际用户地址 => 用户持有的代币数量)
 
+    mapping(uint256 => _Order) public orders; // uint256相当于ID
     // 存款事件
     event Deposit(address token, address user, uint256 amount, uint256 balance);
     // 提款事件
@@ -36,7 +37,20 @@ contract Exchange {
         uint256 amount,
         uint256 balance
     );
-
+    // TODO:
+    // [X] 建立一个订单model
+    // [x] mapping 储存订单的方法
+    // [] 储存订单
+    // 结构体 相当于建数据模型
+    struct _Order {
+        uint id;
+        address user;  // 订单创建的用户
+        address tokenGet;  // 合约订单的地址
+        uint256 amountGet;  // 代币数量
+        address tokenGive;  //
+        uint256 amountGive; // 交易的数量
+        uint256 timestamp; // 时间戳
+    }
     constructor(address _feeAccount, uint256 _feePercent) public {
         feeAccount = _feeAccount;
         feePercent = _feePercent;
@@ -89,4 +103,11 @@ contract Exchange {
     function balanceOf(address _token, address _user) public view returns (uint256) {
         return tokens[_token][_user];
     }
+
+    // 创建订单
+    function makeOrder(address _tokenGet, uint256 _amountGet, address _tokenGive, uint256 _amountGive) public {
+        _id = 1;
+    }
+
+
 }
