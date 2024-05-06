@@ -7,14 +7,14 @@ contract Token {
     // 使用SafeMath进行计算
     using SafeMath for uint;
     string public name = "DApp Token";
-    string public symbol = "DAPP";
-    uint256 public decimals = 18; //以太坊的小数位可以被18位
+    string public symbol = "DAPP";  // 标识
+    uint256 public decimals = 18; //以太坊的小数位可以18位
     uint256 public totalSupply;
 
     // 跟踪余额
     // track balances 获取余额
     // mapping 映射关联键值对 address账户地址 uint256余额单位，1字节等于8个比特，而32指的就是32个字节，即8*32=256比特
-    mapping(address => uint256) public balanceOf;
+    mapping(address => uint256) public balanceOf;  // 余额
     mapping(address => mapping(address => uint256)) public allowance; //双重映射 allowance交易所批准的金额，转移的金额数量
 
     // Events
@@ -32,7 +32,7 @@ contract Token {
     // 转移
     function transfer(address _to, uint256 _value) public returns (bool success) {
         require(balanceOf[msg.sender] >= _value); // require 为 true 执行下面，false 不执行 判断是否有足够的余额进行转移
-        _transfer(msg.sender, _to, _value);
+        _transfer(msg.sender, _to, _value);  //现在这个msg.sender是调用这个函数的用户
         return true;
     }
 
