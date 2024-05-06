@@ -26,7 +26,18 @@ contract Exchange {
     uint256 public feePercent; // 交易费率
     address constant ETHER = address(0); //constant 常量  默认0为以太坊地址
     // 第一个地址：token地址，第二个地址：存入代币的用户地址
+    // 第一层对象是目前有存储的所有代币地址 他们对应的值 是 这个代币下 每个用户 值对应拥有的数量
+    // {
+//     "A代币地址":{
+//         "A用户地址": 300,
+//         "B用户地址": 400
+//     },
+//     "B代币地址": {
+//         "A用户地址": 500
+//     }
+// }
     mapping(address => mapping(address => uint256)) public tokens; // 代币 => (实际用户地址 => 用户持有的代币数量)
+
 
     mapping(uint256 => _Order) public orders; // uint256相当于ID
 

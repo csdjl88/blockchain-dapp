@@ -49,22 +49,41 @@ contract Token {
     }
 
     // approve tokens
-    // 批准函数
+    // 授权函数，一般是指授权交易所操作的代币，所有第一个_spender的参数一般是指交易所的地址，_value授权代币的数量，隐藏参数 msg.sender，指当前的用户
     function approve(address _spender, uint256 _value) public returns (bool success) {
         require(_spender != address(0));
+        // 相当于T1用户在A交易所中授权1000个代币
+        // {
+        //     t1用户: {
+        //         A交易所: 1000
+        //     }
+        // }
         allowance[msg.sender][_spender] = _value;
         emit Approval(msg.sender, _spender, _value);
         return true;
     }
     // `transfer` 用于直接的地址间转移，
     // 而 `transferFrom` 用于授权操作者代表拥有者进行转移。在调用 `transferFrom` 之前，通常需要拥有者通过调用 `approve` 函数提前授权。
+    // 一般由交易所调用transferFrom，所以_from的地址就是交易所的地址，_to的地址就是用户的地址，_value就是授权转移的代币数量
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success){
         // 添加函数限制条件
         require(_value <= balanceOf[_from]); // 批准的数量 <= 来源者的资金
         require(_value <= allowance[_from][msg.sender]); // 批准的数量 <= 交易所的余额
         // 余额 = 余额 - _value
+        // 相当于交易所中A用户的余额 减少 _value
         allowance[_from][msg.sender] = allowance[_from][msg.sender].sub(_value);
         _transfer(_from, _to, _value);
         return true;
+
+ // 交易所的结构
+//     {
+    //     "A代币地址":{
+    //         "A用户地址": 300,
+    //         "B用户地址": 400
+    //     },
+    //     "B代币地址": {
+    //         "A用户地址": 500
+    //     }
+//      }
     }
 }
