@@ -43,8 +43,8 @@ contract Exchange {
 
     uint256 public orderCount; // 相当于订单自增ID
 
-    mapping(uint256 => bool) public orderCancel;
-
+    mapping(uint256 => bool) public orderCanceled;
+    mapping(uint256 => bool) public orderFilled;
     // 存款事件
     event Deposit(address token, address user, uint256 amount, uint256 balance);
     // 提款事件
@@ -52,7 +52,7 @@ contract Exchange {
     // 订单事件
     event Order(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, uint256 timestamp);
     event Cancel(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, uint256 timestamp);
-
+    event Trade(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, address userFill, uint256 timestamp);
     // TODO:
     // [X] 建立一个订单model
     // [x] mapping 储存订单的方法
@@ -143,23 +143,34 @@ contract Exchange {
         // 检查有效订单
         require(_order.id == _id);
         // 取消订单
-        orderCancel[_id] = true;
+        orderCanceled[_id] = true;
         // 取消订单事件
-        emit Cancel(_order.id, msg.sender, _order.tokenGet, _order.amountGet, _order.tokenGive, _order.amountGive, _order.timestamp);
+        emit Cancel(_order.id, msg.sender, _order.tokenGet, _order.amountGet, _order.tokenGive, _order.amountGive, block.timestamp);
     }
 
     function fillOrder(uint256 _id) public {
+        require(_id > 0 && _id < orderCount); // 订单ID合法性检查
+        require(!orderFilled[_id]); // 订单没有被创建
+        require(!orderCanceled[_id]); // 订单没有被取消
         // 拉取订单
         _Order storage _order = orders[_id];
-        _trade(_order.id, msg.user, _order.tokenGet, _order.amountGet, _order.tokenGive, _order.amountGive);
+        _trade(_order.id, _order.user, _order.tokenGet, _order.amountGet, _order.tokenGive, _order.amountGive);
+        orderFilled[_order.id] = true;
     }
     // internal 内部函数，不能外部调用
     function _trade(uint256 _orderId, address _user, address _tokenGet, uint256 _amountGet, address _tokenGive, uint256 _amountGive) internal {
-        // 执行交易
-
         // 收取费用
+        uint256 _feeAmount = _amountGive.mul(feePercent).div(100);  // 交易价格 * 3 % / 100 = 实际交易费用
+        // tokens[_tokenGet][msg.sender]  tokens 指交易所里面储存的地址本，_tokenGet指某一款代币，msg.sender指用户地址，发起填写订单的用户
+        // {A代币地址:{ A用户地址: 300, B用户地址: 400}
+        // 执行交易
+        tokens[_tokenGet][msg.sender] = tokens[_tokenGet][msg.sender].sub(_amountGet.add(_feeAmount));  // 减少用户A代币余额
+        tokens[_tokenGet][_user] = tokens[_tokenGet][_user].add(_amountGet); // 增加用户B代币余额
+        tokens[_tokenGet][feeAccount] = tokens[_tokenGet][feeAccount].add(_feeAmount); // 交易费用
+        tokens[_tokenGive][_user] = tokens[_tokenGive][_user].sub(_amountGive); // 减少用户B代币余额
+        tokens[_tokenGive][msg.sender] = tokens[_tokenGive][msg.sender].add(_amountGet);  // 增加填写订单的人的余额
         // 发送订单事件
-        // 标记订单完成
+        emit Trade(_orderId, _user, _tokenGet, _amountGet, _tokenGive, _amountGive, msg.sender, block.timestamp);
     }
 
 }
