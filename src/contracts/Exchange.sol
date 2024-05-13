@@ -21,7 +21,7 @@ import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 // 交易所
 contract Exchange {
-    using SafeMath for uint;
+    using SafeMath for uint256;
     address public feeAccount; //接收交易费用的账户
     uint256 public feePercent; // 交易费率
     address constant ETHER = address(0); //constant 常量  默认0为以太坊地址
